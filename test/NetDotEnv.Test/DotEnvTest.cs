@@ -11,7 +11,10 @@ namespace NetDotEnv.Test
         {
             var expectedValues = new Dictionary<string, string>
             {
-                {"foo", "bar"}
+                {"foo", "test"},
+                {"FOO", "foo${foo}"},
+                {"FOO2", "test"},
+                {"BAR", "foo${FOO2} test"},
             };
             DotEnv.Load();
             foreach (var kv in expectedValues)

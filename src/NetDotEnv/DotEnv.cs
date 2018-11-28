@@ -181,7 +181,7 @@ namespace NetDotEnv
             return val;
         }
 
-        private static string ExpandVariables(string val, Dictionary<string, string> m)
+        private static string ExpandVariables(string val, IReadOnlyDictionary<string, string> m)
         {
             var rx = new Regex(@"(\\)?(\$)(\()?\{?([A-Z0-9_]+)?\}?", RegexOptions.Compiled);
             return rx.Replace(val, match =>
@@ -197,7 +197,8 @@ namespace NetDotEnv
                 {
                     return subMatch[0].Value.Substring(1);
                 }
-                else if (subMatch[4].Value != "")
+
+                if (subMatch[4].Value != "")
                 {
                     return m.ContainsKey(subMatch[4].Value) ? m[subMatch[4].Value] : string.Empty;
                 }
