@@ -198,12 +198,15 @@ namespace NetDotEnv
                     return subMatch[0].Value.Substring(1);
                 }
 
-                if (subMatch[4].Value != "")
+                if (subMatch[4].Value == "") return match.Value;
+                // process.env value 'wins' over .env file's value
+                var variable = Environment.GetEnvironmentVariable(subMatch[4].Value);
+                if (!string.IsNullOrEmpty(variable))
                 {
-                    return m.ContainsKey(subMatch[4].Value) ? m[subMatch[4].Value] : string.Empty;
+                    return variable;
                 }
+                return m.ContainsKey(subMatch[4].Value) ? m[subMatch[4].Value] : string.Empty;
 
-                return match.Value;
             });
 
         }
