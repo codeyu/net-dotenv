@@ -83,5 +83,27 @@ namespace NetDotEnv.Test
             }
             
         }
+        [Fact]
+        public void ExpansionOfVariableSucceeds()
+        {
+           
+            string envVar1 = "envVar1";
+            string expectedValue = "animal";
+
+            try
+            {
+                Environment.SetEnvironmentVariable(envVar1, expectedValue);
+                DotEnv.Load();
+                string result = Environment.GetEnvironmentVariable("envVar2");
+                var result2 = Environment.GetEnvironmentVariable("ccc");
+                Assert.Equal(expectedValue, result);
+                Assert.Equal("12\\3", result2);
+            }
+            finally
+            {
+                // Clear the variables we just set
+                Environment.SetEnvironmentVariable(envVar1, null);
+            }
+        }
     }
 }

@@ -1,36 +1,63 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Linq;
+using System.Runtime.InteropServices;
+
 namespace NetDotEnv
 {
-    public class DotEnv
+    public static class DotEnv
     {
         private const string DoubleQuoteSpecialChars = "\\\n\r\"!$`";
         private const string DefaultFileName = ".env";
-
-        public static void Load(string[] fileNames = null, bool isOverLoad = false, bool ignoringNonexistentFile = true)
+        private static DotEnvOptions Options { get; set; }
+        public static void Load(string[] fileNames =null, DotEnvOptions options = null)
         {
-            LoadFile(fileNames, isOverLoad, ignoringNonexistentFile);
+            if (options == null)
+            {
+                options = new DotEnvOptions
+                {
+                    IgnoringInvalidLine = false,
+                    IgnoringNonexistentFile = true,
+                    IsOverLoad = false
+                };
+            }
+
+            Options = options;
+            LoadFile(fileNames);
+        }
+        public static Dictionary<string, string> UnMarshal(string str) 
+        {
+            return Parse(new StringReader(str));
+        }
+        public static string Marshal(Dictionary<string, string> envMap) 
+         {
+            var lines = new List<string>();
+            foreach(var kv in envMap)
+            {
+                lines.Add($"{kv.Key}={DoubleQuoteEscape(kv.Value)}");
+            }
+            
+            lines.Sort();
+            return string.Join(Environment.NewLine, lines);
         }
 
-        private static void LoadFile(string[] fileNames, bool isOverLoad, bool ignoringNonexistentFile)
+        private static void LoadFile(string[] fileNames)
         {
             var arrFileNames = fileNames == null || fileNames.Length == 0 ? new []{DefaultFileName} : fileNames;
 
             foreach (var fileName in arrFileNames)
             {
-                SetEnv(fileName, isOverLoad, ignoringNonexistentFile);
+                SetEnv(fileName);
             }
         }
-        private static void SetEnv(string fileName, bool isOverLoad, bool ignoringNonexistentFile)
+        private static void SetEnv(string fileName)
         {
             if (!File.Exists(fileName))
             {
-                if (!ignoringNonexistentFile)
+                if (!Options.IgnoringNonexistentFile)
                 {
                     throw new FileNotFoundException($"An environment file with path \"{fileName}\" does not exist.");
                 }
@@ -42,7 +69,7 @@ namespace NetDotEnv
 
             foreach (var kv in envMap)
             {
-                if (!currentEnv.ContainsKey(kv.Key) || isOverLoad)
+                if (!currentEnv.ContainsKey(kv.Key) || Options.IsOverLoad)
                 {
                     Environment.SetEnvironmentVariable(kv.Key,kv.Value);
                 }
@@ -83,7 +110,7 @@ namespace NetDotEnv
         }
         private static (string key, string value) ParseLine(string line, Dictionary<string, string> envMap)
         {
-            if (line.Length == 0)
+            if (line.Length == 0 && !Options.IgnoringInvalidLine)
             {
                 throw new IndexOutOfRangeException("zero length string");
             }
@@ -121,7 +148,7 @@ namespace NetDotEnv
                 splitString = line.Split(new[] {':'}, 2);
             }
 
-            if(splitString.Length != 2)
+            if(splitString.Length != 2 && !Options.IgnoringInvalidLine)
             {
                 throw new Exception("Can't separate key from value");
             }
@@ -168,20 +195,43 @@ namespace NetDotEnv
                             return match.Value;
                     }
                 });
-                // unescape characters
                 var e = new Regex(@"\\([^$])", RegexOptions.Compiled);
                 val = e.Replace(val, "$1");
             }
 
             if (singleQuotes.Count == 0)
             {
-                val = ExpandVariables(val, envMap);
+                val = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ExpandVariablesWin(val, envMap): ExpandVariablesUnix(val, envMap);
             }
 
             return val;
         }
+        private static string ExpandVariablesWin(string val, IReadOnlyDictionary<string, string> m)
+        {
+            var result = new StringBuilder();
 
-        private static string ExpandVariables(string val, IReadOnlyDictionary<string, string> m)
+            int lastPos = 0, pos;
+            while (lastPos < val.Length && (pos = val.IndexOf('%', lastPos + 1)) >= 0)
+            {
+                if (val[lastPos] == '%')
+                {
+                    var key = val.Substring(lastPos + 1, pos - lastPos - 1);
+                    var value = GetExpandEnv(key, m);
+                    if (!string.IsNullOrEmpty(value))
+                    {
+                        result.Append(value);
+                        lastPos = pos + 1;
+                        continue;
+                    }
+                }
+                result.Append(val.Substring(lastPos, pos - lastPos));
+                lastPos = pos;
+            }
+            result.Append(val.Substring(lastPos));
+
+            return result.ToString();
+        }
+        private static string ExpandVariablesUnix(string val, IReadOnlyDictionary<string, string> m)
         {
             var rx = new Regex(@"(\\)?(\$)(\()?\{?([A-Z0-9_]+)?\}?", RegexOptions.Compiled);
             return rx.Replace(val, match =>
@@ -198,17 +248,24 @@ namespace NetDotEnv
                     return subMatch[0].Value.Substring(1);
                 }
 
-                if (subMatch[4].Value == "") return match.Value;
-                // process.env value 'wins' over .env file's value
-                var variable = Environment.GetEnvironmentVariable(subMatch[4].Value);
-                if (!string.IsNullOrEmpty(variable))
-                {
-                    return variable;
-                }
-                return m.ContainsKey(subMatch[4].Value) ? m[subMatch[4].Value] : string.Empty;
-
+                return subMatch[4].Value == "" ? match.Value : GetExpandEnv(subMatch[4].Value, m);
             });
 
+        }
+
+        private static string GetExpandEnv(string name, IReadOnlyDictionary<string, string> m)
+        {
+            var variable = Environment.GetEnvironmentVariable(name);
+            if (string.IsNullOrEmpty(variable))
+            {
+                return m.ContainsKey(name) ? m[name] : string.Empty;
+            }
+            if (!Options.IsOverLoad)
+            {
+                return variable;
+            }
+
+            return m.ContainsKey(name) ? m[name] : variable;
         }
         private static bool IsIgnoredLine(string line)
         {
@@ -216,7 +273,7 @@ namespace NetDotEnv
 	        return trimmedLine.Length == 0 || trimmedLine.StartsWith("#");
         }
 
-        private string DoubleQuoteEscape(string line)
+        private static string DoubleQuoteEscape(string line)
         {
             foreach (var c in DoubleQuoteSpecialChars)
             {
