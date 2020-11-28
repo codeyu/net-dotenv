@@ -17,56 +17,34 @@ namespace NetDotEnv.Test
                 {"BAR", "foo${FOO2} test"},
             };
             DotEnv.Load();
-            foreach (var kv in expectedValues)
+            foreach (var (key, value) in expectedValues)
             {
-                var envValue = Environment.GetEnvironmentVariable(kv.Key);
-                Assert.Equal(kv.Value, envValue);
+                var envValue = Environment.GetEnvironmentVariable(key);
+                Assert.Equal(value, envValue);
             }
             
         }
         [Fact]
         public void Test_Load_EqualsEnv()
         {
-            var envFileName = "fixtures/equals.env";
+            const string envFileName = "fixtures/equals.env";
             var expectedValues = new Dictionary<string, string>
             {
                 {"OPTION_A", "postgres://localhost:5432/database?sslmode=disable"}
             };
             DotEnv.Load(new []{envFileName});
-            foreach (var kv in expectedValues)
+            foreach (var (key, value) in expectedValues)
             {
-                var envValue = Environment.GetEnvironmentVariable(kv.Key);
-                Assert.Equal(kv.Value, envValue);
+                var envValue = Environment.GetEnvironmentVariable(key);
+                Assert.Equal(value, envValue);
             }
             
         }
-        [Fact]
-        public void Test_Load_SubstitutionsEnv()
-        {
-            var envFileName = "fixtures/substitutions.env";
-            var expectedValues = new Dictionary<string, string>
-            {
-                {"OPTION_A", "1"},
-                {"OPTION_B", "1"},
-                {"OPTION_C", "1"},
-                {"OPTION_D", "11"},
-                {"OPTION_E", null},
-            };
-            DotEnv.Load(new []{envFileName});
-            //issue: https://github.com/dotnet/corefx/issues/28890
-            var str = Environment.ExpandEnvironmentVariables("123-%OPTION_A%%OPTION_B%-222");
-            Assert.Equal("123-11-222", str);
-            foreach (var kv in expectedValues)
-            {
-                var envValue = Environment.GetEnvironmentVariable(kv.Key);
-                Assert.Equal(kv.Value, envValue);
-            }
-            
-        }
+        
         [Fact]
         public void Test_Load_PlainEnv()
         {
-            var envFileName = "fixtures/plain.env";
+            const string envFileName = "fixtures/plain.env";
             var expectedValues = new Dictionary<string, string>
             {
                 {"OPTION_A", "1"},
@@ -76,10 +54,74 @@ namespace NetDotEnv.Test
                 {"OPTION_E", "5"},
             };
             DotEnv.Load(new []{envFileName});
-            foreach (var kv in expectedValues)
+            foreach (var (key, value) in expectedValues)
             {
-                var envValue = Environment.GetEnvironmentVariable(kv.Key);
-                Assert.Equal(kv.Value, envValue);
+                var envValue = Environment.GetEnvironmentVariable(key);
+                Assert.Equal(value, envValue);
+            }
+            
+        }
+        [Fact]
+        public void Test_Load_Quoted()
+        {
+            const string envFileName = "fixtures/quoted.env";
+            var expectedValues = new Dictionary<string, string>
+            {
+                {"OPTION_A", "1"},
+                {"OPTION_B", "2"},
+                {"OPTION_C", null},
+                {"OPTION_D", "\\n"},
+                {"OPTION_E", "1"},
+                {"OPTION_F", "2"},
+                {"OPTION_G", null},
+                {"OPTION_H", "\n"},
+                {"OPTION_I", "echo 'asd'"},
+            };
+            DotEnv.Load(new []{envFileName});
+            foreach (var (key, value) in expectedValues)
+            {
+                var envValue = Environment.GetEnvironmentVariable(key);
+                Assert.Equal(value, envValue);
+            }
+            
+        }
+        
+        [Fact]
+        public void Test_Load_SubstitutionsEnv()
+        {
+            const string envFileName = "fixtures/substitutions.env";
+            var expectedValues = new Dictionary<string, string>
+            {
+                {"OPTION_A", "1"},
+                {"OPTION_B", "1"},
+                {"OPTION_C", "1"},
+                {"OPTION_D", "11"},
+                {"OPTION_E", null},
+            };
+            DotEnv.Load(new []{envFileName}, new DotEnvOptions{IsOverLoad = true});
+            //issue: https://github.com/dotnet/corefx/issues/28890
+            var str = Environment.ExpandEnvironmentVariables("123-%OPTION_A%%OPTION_B%-222");
+            Assert.Equal("123-11-222", str);
+            foreach (var (key, value) in expectedValues)
+            {
+                var envValue = Environment.GetEnvironmentVariable(key);
+                Assert.Equal(value, envValue);
+            }
+        }
+        [Fact]
+        public void Test_Load_Comments()
+        {
+            const string envFileName = "fixtures/with-comments.env";
+            var expectedValues = new Dictionary<string, string>
+            {
+                {"SECRET_KEY", "YOURSECRETKEYGOESHERE"},
+                {"SECRET_HASH", "something-with-a-#-hash"},
+            };
+            DotEnv.Load(new []{envFileName});
+            foreach (var (key, value) in expectedValues)
+            {
+                var envValue = Environment.GetEnvironmentVariable(key);
+                Assert.Equal(value, envValue);
             }
             
         }
@@ -87,17 +129,18 @@ namespace NetDotEnv.Test
         public void ExpansionOfVariableSucceeds()
         {
            
-            string envVar1 = "envVar1";
-            string expectedValue = "animal";
-
+            const string envVar1 = "envVar1";
+            const string expectedValue = "animal";
             try
             {
                 Environment.SetEnvironmentVariable(envVar1, expectedValue);
-                DotEnv.Load();
-                string result = Environment.GetEnvironmentVariable("envVar2");
-                var result2 = Environment.GetEnvironmentVariable("ccc");
+                DotEnv.Load(options:new DotEnvOptions{IsOverLoad = true});
+                var envVar1Value = Environment.GetEnvironmentVariable("envVar1");
+                Assert.Equal(expectedValue, envVar1Value);
+                var result = Environment.GetEnvironmentVariable("envVar2");
                 Assert.Equal(expectedValue, result);
-                Assert.Equal("12\\3", result2);
+                var result2 = Environment.GetEnvironmentVariable("ccc");
+                Assert.Equal("12333", result2);
             }
             finally
             {

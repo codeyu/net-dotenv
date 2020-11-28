@@ -332,3 +332,5 @@ ASALocalRun/
 *.env
 !test/*/*.env
 !test/*/*/*.env
+
+.ionide

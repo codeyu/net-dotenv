@@ -1,7 +1,38 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
   </PropertyGroup>
-
+  <PropertyGroup Condition=" '$(OS)' == 'Windows_NT' ">
+    <TargetFrameworks>$(TargetFrameworks);net46</TargetFrameworks>
+  </PropertyGroup>
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <authors>codeyu</authors>
+    <AssemblyName>NetDotEnv</AssemblyName>
+    <PackageId>NetDotEnv</PackageId>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
+    <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
+    <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
+    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
+    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
+    <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
+    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
+    <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+    <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Copyright>Copyright 2020 © codeyu</Copyright>
+    <title>.NET DotEnv</title>
+    <owners>codeyu</owners>
+    <Description>A .NET Lib to load environment variables from `.env`.</Description>
+    <PackageTags>dotenv</PackageTags>
+    <PackageReleaseNotes>
+      1.0.0
+      - init version
+    </PackageReleaseNotes>
+    <PackageLicense>https://github.com/codeyu/net-dotenv/master/LICENSE</PackageLicense>
+    <PackageProjectUrl>https://github.com/codeyu/net-dotenv</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/codeyu/net-dotenv</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
 </Project>
