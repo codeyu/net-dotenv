@@ -21,6 +21,7 @@ namespace NetDotEnv.Test
             {
                 var envValue = Environment.GetEnvironmentVariable(key);
                 Assert.Equal(value, envValue);
+                Environment.SetEnvironmentVariable(key, null);
             }
             
         }
@@ -37,6 +38,7 @@ namespace NetDotEnv.Test
             {
                 var envValue = Environment.GetEnvironmentVariable(key);
                 Assert.Equal(value, envValue);
+                Environment.SetEnvironmentVariable(key, null);
             }
             
         }
@@ -58,6 +60,7 @@ namespace NetDotEnv.Test
             {
                 var envValue = Environment.GetEnvironmentVariable(key);
                 Assert.Equal(value, envValue);
+                Environment.SetEnvironmentVariable(key, null);
             }
             
         }
@@ -82,10 +85,35 @@ namespace NetDotEnv.Test
             {
                 var envValue = Environment.GetEnvironmentVariable(key);
                 Assert.Equal(value, envValue);
+                Environment.SetEnvironmentVariable(key, null);
             }
             
         }
-        
+        [Fact]
+        public void Test_Load_Expand_Variables()
+        {
+            const string envFileName = "fixtures/expand-variables-unix.env";
+            var expectedValues = new Dictionary<string, string>
+            {
+                {"NODE_ENV", "test"},
+                {"BASIC", "basic"},
+                {"BASIC_EXPAND", "basic"},
+                {"MACHINE", "machine_env"},
+                {"MACHINE_EXPAND", "machine_env"},
+                {"MONGOLAB_URI", "mongodb://username:password@abcd1234.mongolab.com:12345/heroku_db"},
+                {"WITHOUT_CURLY_BRACES_URI_RECURSIVELY", "mongodb://username:password@abcd1234.mongolab.com:12345/heroku_db"},
+                {"WITHOUT_CURLY_BRACES_URI", "mongodb://username:password@abcd1234.mongolab.com:12345/heroku_db"},
+                {"MONGOLAB_URI_RECURSIVELY", "mongodb://username:password@abcd1234.mongolab.com:12345/heroku_db"},
+            };
+            DotEnv.Load(new []{envFileName});
+            foreach (var (key, value) in expectedValues)
+            {
+                var envValue = Environment.GetEnvironmentVariable(key);
+                Assert.Equal(value, envValue);
+                Environment.SetEnvironmentVariable(key, null);
+            }
+            
+        }
         [Fact]
         public void Test_Load_SubstitutionsEnv()
         {
@@ -106,6 +134,7 @@ namespace NetDotEnv.Test
             {
                 var envValue = Environment.GetEnvironmentVariable(key);
                 Assert.Equal(value, envValue);
+                Environment.SetEnvironmentVariable(key, null);
             }
         }
         [Fact]
@@ -122,6 +151,25 @@ namespace NetDotEnv.Test
             {
                 var envValue = Environment.GetEnvironmentVariable(key);
                 Assert.Equal(value, envValue);
+                Environment.SetEnvironmentVariable(key, null);
+            }
+            
+        }
+        [Fact]
+        public void Test_Load_Multiline()
+        {
+            const string envFileName = "fixtures/multi-line-values.env";
+            var expectedValues = new Dictionary<string, string>
+            {
+                {"PRIVATE_KEY1", "-----BEGIN RSA PRIVATE KEY-----\nHkVN9...\n-----END DSA PRIVATE KEY-----\n"},
+                {"PRIVATE_KEY2", "-----BEGIN RSA PRIVATE KEY-----\n...\nHkVN9...\n...\n-----END DSA PRIVATE KEY-----"},
+            };
+            DotEnv.Load(new []{envFileName});
+            foreach (var (key, value) in expectedValues)
+            {
+                var envValue = Environment.GetEnvironmentVariable(key);
+                Assert.Equal(value, envValue);
+                Environment.SetEnvironmentVariable(key, null);
             }
             
         }

@@ -13,8 +13,8 @@ namespace NetDotEnv
     /// </summary>
     public static class DotEnv
     {
-        private const string DoubleQuoteSpecialChars = "\\\n\r\"!$`";
         private const string DefaultFileName = ".env";
+        private const string UltimatePattern = "(?:^|\\A)\\s*(?:export\\s+)?([\\w\\.]+)(?:\\s*=\\s*?|:\\s+?)(\\s*'(?:\\\\'|[^'])*'|\\s*\"(?:\\\\\"|[^\"])*\"|[^\\#\\r\\n]+)?\\s*(?:\\#.*)?(?:$|\\z)";
         private static DotEnvOptions Options { get; set; }
         /// <summary>
         /// 
@@ -35,17 +35,6 @@ namespace NetDotEnv
             Options = options;
             LoadFile(fileNames);
         }
-        public static Dictionary<string, string> UnMarshal(string str) 
-        {
-            return Parse(new StringReader(str));
-        }
-        public static string Marshal(Dictionary<string, string> envMap) 
-         {
-            var lines = envMap.Select(kv => $"{kv.Key}={DoubleQuoteEscape(kv.Value)}").ToList();
-            lines.Sort();
-            return string.Join(Environment.NewLine, lines);
-        }
-
         private static void LoadFile(string[] fileNames)
         {
             var arrFileNames = fileNames == null || fileNames.Length == 0 ? new []{DefaultFileName} : fileNames;
@@ -68,7 +57,6 @@ namespace NetDotEnv
             var envMap = ReadDotEnvFile(fileName);
             var rawEnv = Environment.GetEnvironmentVariables();
             var currentEnv = rawEnv.Keys.Cast<object>().ToDictionary(rawEnvKey => rawEnvKey.ToString(), rawEnvKey => true);
-
             foreach (var kv in envMap.Where(kv => !currentEnv.ContainsKey(kv.Key) || Options.IsOverLoad))
             {
                 Environment.SetEnvironmentVariable(kv.Key,kv.Value);
@@ -77,24 +65,18 @@ namespace NetDotEnv
 
         private static Dictionary<string, string> ReadDotEnvFile(string fileName)
         {
-            //var fileContent = File.ReadAllText(fileName, Encoding.Default);
-            using (var sr = new StreamReader(fileName))
-            {
-                return Parse(sr);
-            }
+            var fileContent = string.Join(Environment.NewLine, File.ReadLines(fileName, Encoding.UTF8).Where(x => !string.IsNullOrWhiteSpace(x)));
+            var regx = new Regex(UltimatePattern,RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace);
+            var matched = regx.Matches(fileContent);
+            var lines = (from Match match in matched select match.Value).ToList();
+            var notMatches = regx.Replace(fileContent, "");
+            lines.AddRange(Regex.Split(notMatches, "[\n\r]+", RegexOptions.Multiline).Where(x=>!string.IsNullOrEmpty(x)));
+            return Parse(lines);
         }
 
-        private static Dictionary<string, string> Parse(TextReader sr)
+        private static Dictionary<string, string> Parse(IEnumerable<string> lines)
         {
             var dicEnv = new Dictionary<string,string>();
-            var lines = new List<string>();
-            using(sr)
-            {
-                while (sr.Peek() >= 0) 
-                {
-                    lines.Add(sr.ReadLine());
-                }
-            }
             foreach (var (key, value) in from line in lines where !IsIgnoredLine(line) select ParseLine(line, dicEnv))
             {
                 dicEnv.Add(key, value);
@@ -157,11 +139,11 @@ namespace NetDotEnv
         {
             val = val.Trim();
             if (val.Length <= 1) return val;
-            var rs = new Regex(@"\A'(.*)'\z", RegexOptions.Compiled);
+            var rs = new Regex(@"\A'(.*)'\z", RegexOptions.Compiled | RegexOptions.Multiline);
             var singleQuotes = rs.Matches(val);
-            var rd = new Regex(@"\A""(.*)""\z", RegexOptions.Compiled);
+            var rd = new Regex(@"\A""(.*)""\z", RegexOptions.Compiled | RegexOptions.Multiline);
             var doubleQuotes = rd.Matches(val);
-            if (singleQuotes.Count > 0 || doubleQuotes.Count > 0) {
+            if (singleQuotes.Count > 0 || doubleQuotes.Count > 0 || (val.StartsWith("\"") && val.EndsWith("\""))) {
                 // pull the quotes off the edges
                 val = val.Substring(1, val.Length - 1 - 1);
             }
@@ -248,25 +230,6 @@ namespace NetDotEnv
         {
             var trimmedLine = line.Trim(" \n\t".ToCharArray());
 	        return trimmedLine.Length == 0 || trimmedLine.StartsWith("#");
-        }
-
-        private static string DoubleQuoteEscape(string line)
-        {
-            foreach (var c in DoubleQuoteSpecialChars)
-            {
-                var toReplace = "\\" + c;
-                switch (c)
-                {
-                    case '\n':
-                        toReplace = "\n";
-                        break;
-                    case '\r':
-                        toReplace = "\r";
-                        break;
-                }
-                line = line.Replace(c.ToString(), toReplace);
-            }
-            return line;
         }
     }
 }
