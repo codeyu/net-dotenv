@@ -7,17 +7,18 @@ namespace NetDotEnv.Test
 {
     public class DotEnvTest
     {
-        private void skipTest()
+        private  bool skipTest()
         {
             if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                return;
+                return true;
             }
+            return false;
         }
         [Fact]
         public void Test_Load_DefaultDotEnv()
         {
-            skipTest();
+            if(skipTest()) return;
             var expectedValues = new Dictionary<string, string>
             {
                 {"foo", "test"},
@@ -37,7 +38,7 @@ namespace NetDotEnv.Test
         [Fact]
         public void Test_Load_EqualsEnv()
         {
-            skipTest();
+            if(skipTest()) return;
             const string envFileName = "fixtures/equals.env";
             var expectedValues = new Dictionary<string, string>
             {
@@ -56,7 +57,7 @@ namespace NetDotEnv.Test
         [Fact]
         public void Test_Load_PlainEnv()
         {
-            skipTest();
+            if(skipTest()) return;
             const string envFileName = "fixtures/plain.env";
             var expectedValues = new Dictionary<string, string>
             {
@@ -78,7 +79,7 @@ namespace NetDotEnv.Test
         [Fact]
         public void Test_Load_Quoted()
         {
-            skipTest();
+            if(skipTest()) return;
             const string envFileName = "fixtures/quoted.env";
             var expectedValues = new Dictionary<string, string>
             {
@@ -104,7 +105,7 @@ namespace NetDotEnv.Test
         [Fact]
         public void Test_Load_Expand_Variables()
         {
-            skipTest();
+            if(skipTest()) return;
             const string envFileName = "fixtures/expand-variables-unix.env";
             var expectedValues = new Dictionary<string, string>
             {
@@ -130,7 +131,7 @@ namespace NetDotEnv.Test
         [Fact]
         public void Test_Load_SubstitutionsEnv()
         {
-            skipTest();
+            if(skipTest()) return;
             const string envFileName = "fixtures/substitutions.env";
             var expectedValues = new Dictionary<string, string>
             {
@@ -154,7 +155,7 @@ namespace NetDotEnv.Test
         [Fact]
         public void Test_Load_Comments()
         {
-            skipTest();
+            if(skipTest()) return;
             const string envFileName = "fixtures/with-comments.env";
             var expectedValues = new Dictionary<string, string>
             {
@@ -173,7 +174,7 @@ namespace NetDotEnv.Test
         [Fact]
         public void Test_Load_Multiline()
         {
-            skipTest();
+            if(skipTest()) return;
             const string envFileName = "fixtures/multi-line-values.env";
             var expectedValues = new Dictionary<string, string>
             {
@@ -192,7 +193,7 @@ namespace NetDotEnv.Test
         [Fact]
         public void ExpansionOfVariableSucceeds()
         {
-            skipTest();
+            if(skipTest()) return;
             const string envVar1 = "envVar1";
             const string expectedValue = "animal";
             try
