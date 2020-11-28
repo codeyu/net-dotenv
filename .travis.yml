@@ -25,4 +25,4 @@ before_script:
 script:
   - dotnet build "src\NetDotEnv"
   - dotnet build "test\NetDotEnv.Test" -c Release
-  - dotnet test "test\NetDotEnv.Test\NetDotEnv.Test.csproj" --configuration Release --no-build --framework netcoreapp3.0
+  - dotnet test "test\NetDotEnv.Test\NetDotEnv.Test.csproj" --configuration Release --no-build
